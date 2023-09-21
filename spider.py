@@ -122,10 +122,16 @@ for pinyin in tqdm(all_pinyin):
 
 words = set(words)
 
+crawled_words = os.listdir("./pics/no_progress")
+
+crawled_words.extend(os.listdir("./pics/progress"))
+
+
+
 
 print("================== 获取所有字的演变字体图像============================")
 for word in tqdm(words):
-    url = get_word_url(word)
+    url = get_word_url(word) if word not in crawled_words else None
     
     if url is not None:
         url = "{}{}".format(URL_ROOT, url)
@@ -136,6 +142,8 @@ for word in tqdm(words):
             if not os.path.exists(path_root):
                 path_root = os.path.join("pics", "progress", word)
             shutil.rmtree(path_root)
+            time.sleep(20)
+            get_pic(url, word)
     time.sleep(0.5)
 
 # print("================== 获取所有图像 ============================")
