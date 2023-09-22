@@ -5,6 +5,8 @@ import shutil
 from collections import defaultdict
 from bs4 import BeautifulSoup
 from tqdm import tqdm
+import argparse
+import threading
 
 
 headers = {
@@ -20,6 +22,9 @@ headers = {
     "Upgrade-Insecure-Requests": "1"
 
 }
+
+URL_ROOT = "http://www.guoxuedashi.net"
+PINYIN_URL = "{}/zidian".format(URL_ROOT)
 
 
 def get_all_pinyin(url):
@@ -65,7 +70,6 @@ def get_word_url(word):
     return None
 
 def get_pic(url, word):
-
     def download(url, path_root, word_type, file_posfix):
         # time.sleep(0.5)
         if not os.path.exists(path_root):
@@ -106,52 +110,91 @@ def get_pic(url, word):
 
             download(img_url, path_root, word_type, file_posfix)
 
-URL_ROOT = "http://www.guoxuedashi.net"
-PINYIN_URL = "{}/zidian".format(URL_ROOT)
-
-print("================== 获取所有拼音 ============================")
-all_pinyin = get_all_pinyin(PINYIN_URL)
-
-words = []
-
-print("================== 获取所有汉字============================")
-for pinyin in tqdm(all_pinyin):
-    url = "http://www.guoxuedashi.net{}".format(pinyin)
-    cur_words = get_all_words(url)
-    words.extend(cur_words)
-
-words = set(words)
-
-crawled_words = os.listdir("./pics/no_progress")
-
-crawled_words.extend(os.listdir("./pics/progress"))
 
 
+def process(words, delay_time):
+    crawled_words = []
+    if os.path.exists("./pics/no_progress"):
+        crawled_words = os.listdir("./pics/no_progress")
+
+    if os.path.exists("./pics/progress"):
+        crawled_words.extend(os.listdir("./pics/progress"))
+    thread_name = threading.current_thread().name
+    for word in tqdm(words, desc=thread_name):
+        while True:
+            try:
+                url = get_word_url(word) if word not in crawled_words else None
+                break
+            except:
+                print("Raise exception when geting word url")
+                time.sleep(delay_time)
+        
+        if url is not None:
+            url = "{}{}".format(URL_ROOT, url)
+            while True:
+                try:
+                    get_pic(url, word)
+                    break
+                except:
+                    path_root = os.path.join("pics", "no_progress", word)
+                    if not os.path.exists(path_root):
+                        path_root = os.path.join("pics", "progress", word)
+                    if os.path.exists(path_root):
+                        shutil.rmtree(path_root)
+                    print("\nexception on word: {}".format(word))
+                    time.sleep(delay_time)
 
 
-print("================== 获取所有字的演变字体图像============================")
-for word in tqdm(words):
-    url = get_word_url(word) if word not in crawled_words else None
+def main(args):
+    print("================== 获取所有拼音 ============================")
+    all_pinyin = get_all_pinyin(PINYIN_URL)
+
+    words = []
+
+    print("================== 获取所有汉字============================")
+    for pinyin in tqdm(all_pinyin):
+        url = "http://www.guoxuedashi.net{}".format(pinyin)
+        cur_words = get_all_words(url)
+        words.extend(cur_words)
+
+    words = list(set(words))
+
     
-    if url is not None:
-        url = "{}{}".format(URL_ROOT, url)
-        try:
-            get_pic(url, word)
-        except:
-            path_root = os.path.join("pics", "no_progress", word)
-            if not os.path.exists(path_root):
-                path_root = os.path.join("pics", "progress", word)
-            shutil.rmtree(path_root)
-            time.sleep(20)
-            get_pic(url, word)
-    time.sleep(0.5)
 
-# print("================== 获取所有图像 ============================")
-# for word, url in tqdm(word_to_url.items()):
-#     try:
-#         get_pic(url, word)
-#     except:
-#         path_root = os.path.join("pics", "no_progress", word)
-#         if not os.path.exists(path_root):
-#             path_root = os.path.join("pics", "progress", word)
-#         shutil.rmtree(path_root)
+    print("================== 获取所有字的演变字体图像============================")
+
+    threads = []
+    num_thread = args.num_thread
+    delay_time = args.delay_time
+
+    step = len(words) // num_thread + 1
+
+    for i in range(0, len(words), step):
+        thread = threading.Thread(target=process, args=(words[i:i+step], delay_time), name="Thread-{}".format(i//step))
+        thread.start()
+        threads.append(thread)
+    
+    for thread in threads:
+        thread.join()
+    
+    print("================== all finished =========================")
+
+
+
+
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--num_thread', type=int, default=5, help='number of thread')
+    parser.add_argument('--delay_time', type=int, default=20, help='the time delay when raise network exception')
+
+    args = parser.parse_args()
+
+    num_thread = args.num_thread
+    delay_time = args.delay_time
+
+    main(args)
+
+    
+
