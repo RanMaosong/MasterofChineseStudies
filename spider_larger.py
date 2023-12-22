@@ -75,6 +75,10 @@ def get_pic(url, word):
         if not os.path.exists(path_root):
             os.makedirs(path_root)
         path = os.path.join(path_root, "{}.{}".format(word_type, file_posfix))
+        avoid_syms = ["?", ", ", "_", "/", "*", "“", "”", "<", ">", "|"]
+        for sym in avoid_syms:
+            if sym in path:
+                path = path.replace(sym, "")
         r = requests.get(url)
         with open(path, "wb") as f:
             f.write(r.content)
@@ -100,19 +104,19 @@ def get_pic(url, word):
         download(img_url, path_root, word_type, file_posfix)
 
 
+    if len(div.select("table")) != 0:
+        lis = div.select("table tr")[1].select("td ul li")
+        for li in lis:
+            word_type = li.contents[0]
+            li_spans = li.select("span")
+            for li_span in li_spans:
+                img_url = li_span.select("img")[0].get("src")
+                sub_word_type = li_span.contents[2]
 
-    lis = div.select("table tr")[1].select("td ul li")
-    for li in lis:
-        word_type = li.contents[0]
-        li_spans = li.select("span")
-        for li_span in li_spans:
-            img_url = li_span.select("img")[0].get("src")
-            sub_word_type = li_span.contents[-1]
+                path_root = os.path.join("pics", "larger", word)
+                file_posfix = img_url.split(".")[-1]
 
-            path_root = os.path.join("pics", "larger", word)
-            file_posfix = img_url.split(".")[-1]
-
-            download(img_url, path_root, f"{word_type}-{sub_word_type}", file_posfix)
+                download(img_url, path_root, f"{word_type}-{sub_word_type}", file_posfix)
 
 
 
@@ -136,11 +140,12 @@ def process(words, delay_time):
                 try:
                     get_pic(url, word)
                     break
-                except:
+                except Exception as e:
                     path_root = os.path.join("pics", "larger", word)
                     if os.path.exists(path_root):
                         shutil.rmtree(path_root)
                     print("\nexception on word: {}".format(word))
+                    print(e)
                     time.sleep(delay_time)
 
 
@@ -185,8 +190,8 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--num_thread', type=int, default=5, help='number of thread')
-    parser.add_argument('--delay_time', type=int, default=20, help='the time delay when raise network exception')
+    parser.add_argument('--num_thread', type=int, default=1, help='number of thread')
+    parser.add_argument('--delay_time', type=int, default=2, help='the time delay when raise network exception')
 
     args = parser.parse_args()
 
