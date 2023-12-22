@@ -76,6 +76,11 @@ def get_pic(url, word):
             os.makedirs(path_root)
         path = os.path.join(path_root, "{}.{}".format(word_type, file_posfix))
         r = requests.get(url)
+        avoid_syms = ["?", ", ", "_", "/", "*", "“", "”", "<", ">", "|"]
+        for sym in avoid_syms:
+            if sym in path:
+                path = path.replace(sym, "")
+
         with open(path, "wb") as f:
             f.write(r.content)
 
@@ -87,21 +92,22 @@ def get_pic(url, word):
     div = bs.select("div.info_txt2.clearfix")[0]
 
     # 进度条
-    lis = div.select("table tr")[1].select("td ul li")
-    for li in lis:
-        word_type = li.contents[0]
-        li_spans = li.select("span")
-        for li_span in li_spans:
-            img_url = li_span.select("img")[0].get("src")
-            sub_word_type = li_span.contents[-1]
+    if len(div.select("table")) != 0:
+        lis = div.select("table tr")[1].select("td ul li")
+        for li in lis:
+            word_type = li.contents[0]
+            li_spans = li.select("span")
+            for li_span in li_spans:
+                img_url = li_span.select("img")[0].get("src")
+                sub_word_type = li_span.contents[2]
 
-            path_root = os.path.join("pics", "all", word)
-            file_posfix = img_url.split(".")[-1]
+                path_root = os.path.join("pics", "all", word)
+                file_posfix = img_url.split(".")[-1]
 
-            download(img_url, path_root, f"{word_type}-{sub_word_type}", file_posfix)
+                download(img_url, path_root, f"{word_type}-{sub_word_type}", file_posfix)
     
 
-    imgs = div.find_all("img", limit=2000)
+    imgs = div.find_all("img")
 
     for img in imgs:
         parent = img.parent
@@ -155,6 +161,7 @@ def process(words, delay_time):
                     if os.path.exists(path_root):
                         shutil.rmtree(path_root)
                     print("\nexception on word: {}".format(word))
+                    print(e)
                     time.sleep(delay_time)
 
 
