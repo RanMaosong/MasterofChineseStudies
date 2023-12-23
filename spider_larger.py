@@ -75,7 +75,7 @@ def get_pic(url, word):
         if not os.path.exists(path_root):
             os.makedirs(path_root)
         path = os.path.join(path_root, "{}.{}".format(word_type, file_posfix))
-        avoid_syms = ["?", ", ", "_", "/", "*", "“", "”", "<", ">", "|"]
+        avoid_syms = ["?", ", ", "_", "/", "*", "“", "”", "<", ">", "|", "\n", "\r", "\t"]
         for sym in avoid_syms:
             if sym in path:
                 path = path.replace(sym, "")
@@ -91,17 +91,25 @@ def get_pic(url, word):
     div = bs.select("div.info_txt2.clearfix")[0]
 
     # 没有进度条的
-    spans = div.select("div.info_txt2.clearfix >span")
+    spans = div.select("span")
+    h2_display = False
     for index_, span in enumerate(spans):
-        if index_ > 1:
-            if (span.previous_sibling == "\n" and span.previous_sibling.previous_sibling.name=="h2") or span.previous_sibling.name=="h2":
+        if span.parent.name == "li":
+            continue
+
+        if h2_display:
+            if (span.previous_sibling == "\n" and span.previous_sibling.previous_sibling.name=="h2"):
                 break
-        word_type = span.contents[-1]
+
+
+        # word_type = span.contents[-1]
+        word_type = span.text
         img_url = span.select("img")[0].get("src")
 
         path_root = os.path.join("pics", "larger", word)
         file_posfix = img_url.split(".")[-1]
         download(img_url, path_root, word_type, file_posfix)
+        h2_display =True
 
 
     if len(div.select("table")) != 0:
@@ -111,7 +119,8 @@ def get_pic(url, word):
             li_spans = li.select("span")
             for li_span in li_spans:
                 img_url = li_span.select("img")[0].get("src")
-                sub_word_type = li_span.contents[2]
+                # sub_word_type = li_span.contents[2]
+                sub_word_type = li_span.text
 
                 path_root = os.path.join("pics", "larger", word)
                 file_posfix = img_url.split(".")[-1]

@@ -76,7 +76,7 @@ def get_pic(url, word):
             os.makedirs(path_root)
         path = os.path.join(path_root, "{}.{}".format(word_type, file_posfix))
         r = requests.get(url)
-        avoid_syms = ["?", ", ", "_", "/", "*", "“", "”", "<", ">", "|"]
+        avoid_syms = ["?", ", ", "_", "/", "*", "“", "”", "<", ">", "|", "\n", "\r", "\t"]
         for sym in avoid_syms:
             if sym in path:
                 path = path.replace(sym, "")
@@ -99,7 +99,8 @@ def get_pic(url, word):
             li_spans = li.select("span")
             for li_span in li_spans:
                 img_url = li_span.select("img")[0].get("src")
-                sub_word_type = li_span.contents[2]
+                # sub_word_type = li_span.contents[2]
+                sub_word_type = li_span.text
 
                 path_root = os.path.join("pics", "all", word)
                 file_posfix = img_url.split(".")[-1]
@@ -115,7 +116,8 @@ def get_pic(url, word):
             continue
         img_url = img.get("src")
 
-        sub_word_type = parent.contents[-1]
+        # sub_word_type = parent.contents[-1]
+        sub_word_type = parent.text
         path_root = os.path.join("pics", "all", word)
         file_posfix = img_url.split(".")[-1]
 
